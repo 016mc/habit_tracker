@@ -23,7 +23,7 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.22.2'
+        flutter-version: '3.24.0'
         channel: 'stable'
     
     - name: Setup Android SDK
@@ -32,14 +32,21 @@ jobs:
         cmdline-tools-version: 11076708
         packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
     
+    - name: Accept Android licenses
+      run: yes | flutter doctor --android-licenses || true
+    
     - name: Install dependencies
       run: flutter pub get
     
+    - name: Clean build
+      run: flutter clean
+    
     - name: Build APK (Debug)
-      run: flutter build apk --debug
+      run: flutter build apk --debug --no-shrink
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
         path: build/app/outputs/flutter-apk/app-debug.apk
+        if-no-files-found: warn
