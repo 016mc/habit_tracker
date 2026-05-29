@@ -1,0 +1,40 @@
+# Flutter 项目 Lint 配置
+# 包含 Flutter 官方推荐的所有规则
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  # 排除生成的文件，避免 lint 警告
+  exclude:
+    - '**/*.g.dart'
+    - '**/*.freezed.dart'
+
+  # 严格模式配置
+  strong-mode:
+    # 隐式动态类型相关
+    implicit-casts: false
+    implicit-dynamic: false
+
+  errors:
+    # 将缺失返回值视为错误
+    missing_return: error
+    # 将缺失必需参数视为错误
+    missing_required_param: error
+
+linter:
+  # 启用额外的 lint 规则
+  rules:
+    # 代码风格
+    - prefer_single_quotes
+    - always_declare_return_types
+    - annotate_overrides
+    - avoid_empty_else
+    - avoid_print
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_final_fields
+    - prefer_final_locals
+    - unnecessary_new
+    - unnecessary_this
+    - sized_box_for_whitespace
+    - use_key_in_widget_constructors
