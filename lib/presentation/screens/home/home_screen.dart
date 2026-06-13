@@ -14,6 +14,7 @@ class HomeScreen extends StatefulWidget {
   final ValueChanged<String>? onArchiveHabit;
   final ValueChanged<String>? onCheckIn;
   final ValueChanged<String>? onUndoCheckIn;
+  final void Function(String habitId, String newName)? onRenameHabit;
   final VoidCallback? onBackfill;
   final VoidCallback? onStatisticsTap;
   final VoidCallback? onSettingsTap;
@@ -30,6 +31,7 @@ class HomeScreen extends StatefulWidget {
     this.onArchiveHabit,
     this.onCheckIn,
     this.onUndoCheckIn,
+    this.onRenameHabit,
     this.onBackfill,
     this.onStatisticsTap,
     this.onSettingsTap,
@@ -355,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           subtitle: Text(
             completed
-                ? '已完成 ${checkCount}/${habit.targetCount} ${habit.unit}'
+                ? '已完成 $checkCount/${habit.targetCount} ${habit.unit}'
                 : '目标: ${habit.targetCount} ${habit.unit}（已打卡 $checkCount 次）',
             style: TextStyle(
               color: completed ? AppColors.primary : const Color(0xFF94A3B8),
@@ -381,8 +383,101 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
           ),
+          onLongPress: () => _showHabitOptions(habit),
+        ),
         ),
       ),
+    );
+  }
+
+  /// 弹出习惯操作菜单
+  void _showHabitOptions(Habit habit) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('修改名称'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _showRenameDialog(habit);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.archive_outlined, color: Colors.orange),
+                title: const Text('归档'),
+                subtitle: const Text('归档后可在设置中恢复', style: TextStyle(fontSize: 12)),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  widget.onArchiveHabit?.call(habit.id);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 弹出修改名称对话框
+  void _showRenameDialog(Habit habit) {
+    final controller = TextEditingController(text: habit.name);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('修改名称'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: '习惯名称',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (value) {
+              final newName = value.trim();
+              if (newName.isNotEmpty && newName != habit.name) {
+                widget.onRenameHabit?.call(habit.id, newName);
+              }
+              Navigator.of(context).pop();
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                final newName = controller.text.trim();
+                if (newName.isNotEmpty && newName != habit.name) {
+                  widget.onRenameHabit?.call(habit.id, newName);
+                }
+                Navigator.of(context).pop();
+              },
+              child: const Text('确定'),
+            ),
+          ],
+        );
+      },
     );
   }
 

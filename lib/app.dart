@@ -192,6 +192,20 @@ class _HomeScreenWrapper extends ConsumerWidget {
           }
         }
       },
+      onRenameHabit: (habitId, newName) async {
+        try {
+          await ref.read(habitProvider.notifier).editHabit(
+            habitId: habitId,
+            name: newName,
+          );
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('修改名称失败: $e')),
+            );
+          }
+        }
+      },
       onBackfill: () {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('补打卡功能开发中')),
