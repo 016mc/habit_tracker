@@ -57,9 +57,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didUpdateWidget(HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 只在习惯数量变化时更新（新增或删除），不更新顺序
+    // 习惯数量变化或内容变化时更新
     if (widget.habits.length != oldWidget.habits.length) {
       _localHabits = List.from(widget.habits);
+    } else {
+      // 检查是否有名称等字段变化，同步更新
+      for (int i = 0; i < _localHabits.length && i < widget.habits.length; i++) {
+        if (_localHabits[i].id == widget.habits[i].id &&
+            _localHabits[i].name != widget.habits[i].name) {
+          _localHabits[i] = widget.habits[i];
+        }
+      }
     }
   }
 
@@ -131,8 +139,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 onFieldSubmitted: (value) {
                   final name = value.trim();
                   if (name.isNotEmpty) {
-                    widget.onAddHabit?.call(name);
                     Navigator.of(context).pop();
+                    widget.onAddHabit?.call(name);
                   }
                 },
               ),
@@ -143,8 +151,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () {
                     final name = nameController.text.trim();
                     if (name.isNotEmpty) {
-                      widget.onAddHabit?.call(name);
                       Navigator.of(context).pop();
+                      widget.onAddHabit?.call(name);
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -384,6 +392,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () {
                   Navigator.of(context).pop();
                   widget.onArchiveHabit?.call(habit.id);
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    SnackBar(content: Text('已归档「${habit.name}」')),
+                  );
                 },
               ),
               const SizedBox(height: 8),
