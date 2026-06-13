@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Text('还没有习惯，点击右下角添加'),
             )
           : ReorderableListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.only(top: 8, bottom: 80),
               itemCount: _localHabits.length,
               onReorder: _onReorder,
               proxyDecorator: (child, index, animation) {
