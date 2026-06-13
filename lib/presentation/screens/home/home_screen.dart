@@ -264,128 +264,85 @@ class _HomeScreenState extends State<HomeScreen> {
     required bool completed,
     required int checkCount,
   }) {
-    return Dismissible(
+    return Container(
       key: key,
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.red,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(
-          Icons.archive,
-          color: Colors.white,
-          size: 28,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: completed
+            ? AppColors.primary.withOpacity(0.08)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: completed
+              ? AppColors.primary.withOpacity(0.3)
+              : const Color(0xFFE2E8F0),
         ),
       ),
-      confirmDismiss: (direction) async {
-        return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('归档习惯'),
-            content: Text('确定要归档「${habit.name}」吗？归档后可以到设置中恢复。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('取消'),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 拖拽手柄
+            ReorderableDragStartListener(
+              index: _localHabits.indexOf(habit),
+              child: const Icon(
+                Icons.drag_handle,
+                color: Color(0xFFCBD5E1),
+                size: 20,
               ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
-                ),
-                child: const Text('归档'),
-              ),
-            ],
-          ),
-        );
-      },
-      onDismissed: (direction) {
-        widget.onArchiveHabit?.call(habit.id);
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: completed
-              ? AppColors.primary.withOpacity(0.08)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: completed
-                ? AppColors.primary.withOpacity(0.3)
-                : const Color(0xFFE2E8F0),
-          ),
-        ),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-          leading: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 拖拽手柄
-              ReorderableDragStartListener(
-                index: _localHabits.indexOf(habit),
-                child: const Icon(
-                  Icons.drag_handle,
-                  color: Color(0xFFCBD5E1),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // 习惯图标
-              CircleAvatar(
-                backgroundColor: completed
-                    ? AppColors.primary
-                    : Color(habit.colorValue),
-                radius: 18,
-                child: Icon(
-                  completed ? Icons.check : _getCategoryIcon(habit.category),
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-            ],
-          ),
-          title: Text(
-            habit.name,
-            style: TextStyle(
-              decoration: completed ? TextDecoration.lineThrough : null,
-              color: completed ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
             ),
-          ),
-          subtitle: Text(
-            completed
-                ? '已完成 $checkCount/${habit.targetCount} ${habit.unit}'
-                : '目标: ${habit.targetCount} ${habit.unit}（已打卡 $checkCount 次）',
-            style: TextStyle(
-              color: completed ? AppColors.primary : const Color(0xFF94A3B8),
-              fontWeight: completed ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-          trailing: IconButton(
-            icon: Icon(
-              completed
-                  ? Icons.check_circle
-                  : Icons.radio_button_unchecked,
-              color: completed
+            const SizedBox(width: 8),
+            // 习惯图标
+            CircleAvatar(
+              backgroundColor: completed
                   ? AppColors.primary
-                  : const Color(0xFFCBD5E1),
-              size: 28,
+                  : Color(habit.colorValue),
+              radius: 18,
+              child: Icon(
+                completed ? Icons.check : _getCategoryIcon(habit.category),
+                color: Colors.white,
+                size: 18,
+              ),
             ),
-            tooltip: completed ? '撤销打卡' : '打卡',
-            onPressed: () {
-              if (completed) {
-                widget.onUndoCheckIn?.call(habit.id);
-              } else {
-                widget.onCheckIn?.call(habit.id);
-              }
-            },
+          ],
+        ),
+        title: Text(
+          habit.name,
+          style: TextStyle(
+            decoration: completed ? TextDecoration.lineThrough : null,
+            color: completed ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
           ),
-          onLongPress: () => _showHabitOptions(habit),
         ),
+        subtitle: Text(
+          completed
+              ? '已完成 $checkCount/${habit.targetCount} ${habit.unit}'
+              : '目标: ${habit.targetCount} ${habit.unit}（已打卡 $checkCount 次）',
+          style: TextStyle(
+            color: completed ? AppColors.primary : const Color(0xFF94A3B8),
+            fontWeight: completed ? FontWeight.w600 : FontWeight.normal,
+          ),
         ),
+        trailing: IconButton(
+          icon: Icon(
+            completed
+                ? Icons.check_circle
+                : Icons.radio_button_unchecked,
+            color: completed
+                ? AppColors.primary
+                : const Color(0xFFCBD5E1),
+            size: 28,
+          ),
+          tooltip: completed ? '撤销打卡' : '打卡',
+          onPressed: () {
+            if (completed) {
+              widget.onUndoCheckIn?.call(habit.id);
+            } else {
+              widget.onCheckIn?.call(habit.id);
+            }
+          },
+        ),
+        onLongPress: () => _showHabitOptions(habit),
       ),
     );
   }
