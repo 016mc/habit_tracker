@@ -290,6 +290,25 @@ class HabitNotifier extends StateNotifier<HabitState> {
     }
   }
 
+  /// 恢复已归档习惯
+  ///
+  /// [habitId] 习惯ID
+  Future<void> unarchiveHabit(String habitId) async {
+    try {
+      await _habitService.unarchiveHabit(habitId);
+      // 重新加载习惯列表
+      await loadHabits();
+    } catch (e) {
+      state = state.copyWith(error: '恢复习惯失败: ${e.toString()}');
+      rethrow;
+    }
+  }
+
+  /// 加载已归档习惯列表
+  Future<List<Habit>> loadArchivedHabits() async {
+    return await _habitService.getArchivedHabits(_userId);
+  }
+
   // ============================================================
   // 筛选与搜索
   // ============================================================

@@ -6,11 +6,9 @@ import 'presentation/theme/theme_provider.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/statistics/statistics_screen.dart';
 import 'presentation/screens/settings/settings_screen.dart';
-import 'presentation/screens/habit_edit/habit_edit_screen.dart';
 import 'presentation/providers/habit_provider.dart';
 import 'presentation/providers/checkin_provider.dart';
 import 'presentation/providers/stats_provider.dart';
-import 'data/models/habit_model.dart';
 
 /// 应用根组件
 class HabitTrackerApp extends ConsumerStatefulWidget {
@@ -21,12 +19,6 @@ class HabitTrackerApp extends ConsumerStatefulWidget {
 }
 
 class _HabitTrackerAppState extends ConsumerState<HabitTrackerApp> {
-  /// 默认本地用户ID
-  static const String _defaultUserId = 'local_user';
-
-  /// 应用是否已完成初始化
-  bool _isInitialized = false;
-
   @override
   void initState() {
     super.initState();
@@ -56,6 +48,9 @@ class _HabitTrackerAppState extends ConsumerState<HabitTrackerApp> {
       setState(() => _isInitialized = true);
     }
   }
+
+  /// 应用是否已完成初始化
+  bool _isInitialized = false;
 
   @override
   Widget build(BuildContext context) {
@@ -99,64 +94,6 @@ class _HabitTrackerAppState extends ConsumerState<HabitTrackerApp> {
         '/statistics': (context) => const StatisticsScreen(),
         '/settings': (context) => const SettingsScreen(),
       },
-      onGenerateRoute: (settings) {
-        if (settings.name == '/habit/add') {
-          return MaterialPageRoute(
-            builder: (context) => HabitEditScreen(
-              userId: _defaultUserId,
-              onSave: (habit) {
-                // 保存新习惯到数据库（不等待，避免阻塞UI）
-                ref.read(habitProvider.notifier).addHabit(
-                  name: habit.name,
-                  description: habit.description ?? '',
-                  category: habit.category,
-                  iconName: habit.iconName,
-                  colorValue: habit.colorValue,
-                  targetCount: habit.targetCount,
-                  targetValue: habit.targetValue.toDouble(),
-                  unit: habit.unit,
-                  reminderTimes: habit.reminderTimes,
-                );
-                // 立即返回首页
-                Navigator.of(context).pop();
-              },
-            ),
-          );
-        }
-        if (settings.name == '/habit/edit') {
-          final habit = settings.arguments as Habit?;
-          if (habit == null) {
-            return MaterialPageRoute(
-              builder: (context) => const Scaffold(
-                body: Center(child: Text('缺少习惯参数')),
-              ),
-            );
-          }
-          return MaterialPageRoute(
-            builder: (context) => HabitEditScreen(
-              habit: habit,
-              userId: habit.userId,
-              onSave: (updatedHabit) async {
-                // 更新习惯到数据库
-                await ref.read(habitProvider.notifier).editHabit(
-                  habitId: updatedHabit.id!,
-                  name: updatedHabit.name,
-                  description: updatedHabit.description,
-                  category: updatedHabit.category,
-                  iconName: updatedHabit.iconName,
-                  colorValue: updatedHabit.colorValue,
-                  targetCount: updatedHabit.targetCount,
-                  targetValue: updatedHabit.targetValue.toDouble(),
-                  unit: updatedHabit.unit,
-                  reminderTimes: updatedHabit.reminderTimes,
-                );
-                Navigator.of(context).pop();
-              },
-            ),
-          );
-        }
-        return null;
-      },
     );
   }
 }
@@ -187,11 +124,19 @@ class _HomeScreenWrapper extends ConsumerWidget {
       todayCheckIns: checkInState.todayCheckIns,
       streakDays: totalStreakDays,
       bestStreakDays: totalBestStreakDays,
-      onAddHabit: () {
-        Navigator.of(context).pushNamed('/habit/add');
-      },
-      onEditHabit: (habit) {
-        Navigator.of(context).pushNamed('/habit/edit', arguments: habit);
+      onAddHabit: (name) async {
+        try {
+          await ref.read(habitProvider.notifier).addHabit(name: name);
+          final updatedHabits = ref.read(habitProvider).habits;
+          ref.read(checkInProvider.notifier).loadTodayCheckIns(updatedHabits);
+          ref.read(statsProvider.notifier).loadAllStats(updatedHabits);
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('添加习惯失败: $e')),
+            );
+          }
+        }
       },
       onDeleteHabit: (habitId) async {
         try {
@@ -230,6 +175,19 @@ class _HomeScreenWrapper extends ConsumerWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('打卡失败: $e')),
+            );
+          }
+        }
+      },
+      onUndoCheckIn: (habitId) async {
+        try {
+          await ref.read(checkInProvider.notifier).undoCheckIn(habitId: habitId);
+          final updatedHabits = ref.read(habitProvider).habits;
+          ref.read(statsProvider.notifier).refreshStats(updatedHabits);
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('撤销打卡失败: $e')),
             );
           }
         }

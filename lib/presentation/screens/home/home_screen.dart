@@ -9,11 +9,11 @@ class HomeScreen extends StatefulWidget {
   final List<CheckIn> todayCheckIns;
   final int streakDays;
   final int bestStreakDays;
-  final VoidCallback? onAddHabit;
-  final ValueChanged<Habit>? onEditHabit;
+  final ValueChanged<String>? onAddHabit;
   final ValueChanged<String>? onDeleteHabit;
   final ValueChanged<String>? onArchiveHabit;
   final ValueChanged<String>? onCheckIn;
+  final ValueChanged<String>? onUndoCheckIn;
   final VoidCallback? onBackfill;
   final VoidCallback? onStatisticsTap;
   final VoidCallback? onSettingsTap;
@@ -26,10 +26,10 @@ class HomeScreen extends StatefulWidget {
     this.streakDays = 0,
     this.bestStreakDays = 0,
     this.onAddHabit,
-    this.onEditHabit,
     this.onDeleteHabit,
     this.onArchiveHabit,
     this.onCheckIn,
+    this.onUndoCheckIn,
     this.onBackfill,
     this.onStatisticsTap,
     this.onSettingsTap,
@@ -88,6 +88,84 @@ class _HomeScreenState extends State<HomeScreen> {
     widget.onReorderHabits?.call(updatedHabits);
   }
 
+  /// 弹出添加习惯的 BottomSheet
+  void _showAddHabitSheet() {
+    final TextEditingController nameController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '添加新习惯',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: nameController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: '习惯名称',
+                  hintText: '输入习惯名称',
+                  border: OutlineInputBorder(),
+                ),
+                onFieldSubmitted: (value) {
+                  final name = value.trim();
+                  if (name.isNotEmpty) {
+                    widget.onAddHabit?.call(name);
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final name = nameController.text.trim();
+                    if (name.isNotEmpty) {
+                      widget.onAddHabit?.call(name);
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    '创建',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,36 +179,79 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: _localHabits.isEmpty
-          ? const Center(
-              child: Text('还没有习惯，点击右下角添加'),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('还没有习惯，点击下方按钮添加'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _showAddHabitSheet,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('添加新习惯'),
+                  ),
+                ],
+              ),
             )
-          : ReorderableListView.builder(
-              padding: const EdgeInsets.only(top: 8, bottom: 80),
-              itemCount: _localHabits.length,
-              onReorder: _onReorder,
-              proxyDecorator: (child, index, animation) {
-                return Material(
-                  elevation: 8,
-                  borderRadius: BorderRadius.circular(12),
-                  child: child,
-                );
-              },
-              itemBuilder: (context, index) {
-                final habit = _localHabits[index];
-                final checkCount = _getCheckInCount(habit.id);
-                final completed = checkCount >= habit.targetCount;
+          : Column(
+              children: [
+                Expanded(
+                  child: ReorderableListView.builder(
+                    padding: const EdgeInsets.only(top: 8, bottom: 80),
+                    itemCount: _localHabits.length,
+                    onReorder: _onReorder,
+                    proxyDecorator: (child, index, animation) {
+                      return Material(
+                        elevation: 8,
+                        borderRadius: BorderRadius.circular(12),
+                        child: child,
+                      );
+                    },
+                    itemBuilder: (context, index) {
+                      final habit = _localHabits[index];
+                      final checkCount = _getCheckInCount(habit.id);
+                      final completed = checkCount >= habit.targetCount;
 
-                return _buildHabitCard(
-                  key: ValueKey(habit.id),
-                  habit: habit,
-                  completed: completed,
-                  checkCount: checkCount,
-                );
-              },
+                      return _buildHabitCard(
+                        key: ValueKey(habit.id),
+                        habit: habit,
+                        completed: completed,
+                        checkCount: checkCount,
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: widget.onAddHabit,
-        child: const Icon(Icons.add),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: ElevatedButton(
+            onPressed: _showAddHabitSheet,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              '添加新习惯',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -141,81 +262,126 @@ class _HomeScreenState extends State<HomeScreen> {
     required bool completed,
     required int checkCount,
   }) {
-    return Container(
+    return Dismissible(
       key: key,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: completed
-            ? AppColors.primary.withOpacity(0.08)
-            : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: completed
-              ? AppColors.primary.withOpacity(0.3)
-              : const Color(0xFFE2E8F0),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(
+          Icons.archive,
+          color: Colors.white,
+          size: 28,
         ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-        leading: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 拖拽手柄
-            ReorderableDragStartListener(
-              index: _localHabits.indexOf(habit),
-              child: const Icon(
-                Icons.drag_handle,
-                color: Color(0xFFCBD5E1),
-                size: 20,
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('归档习惯'),
+            content: Text('确定要归档「${habit.name}」吗？归档后可以到设置中恢复。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
               ),
-            ),
-            const SizedBox(width: 8),
-            // 习惯图标
-            CircleAvatar(
-              backgroundColor: completed
-                  ? AppColors.primary
-                  : Color(habit.colorValue),
-              radius: 18,
-              child: Icon(
-                completed ? Icons.check : _getCategoryIcon(habit.category),
-                color: Colors.white,
-                size: 18,
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+                child: const Text('归档'),
               ),
-            ),
-          ],
-        ),
-        title: Text(
-          habit.name,
-          style: TextStyle(
-            decoration: completed ? TextDecoration.lineThrough : null,
-            color: completed ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
+            ],
           ),
-        ),
-        subtitle: Text(
-          completed
-              ? '已完成 ${checkCount}/${habit.targetCount} ${habit.unit}'
-              : '目标: ${habit.targetCount} ${habit.unit}（已打卡 $checkCount 次）',
-          style: TextStyle(
-            color: completed ? AppColors.primary : const Color(0xFF94A3B8),
-            fontWeight: completed ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
-        trailing: IconButton(
-          icon: Icon(
-            completed
-                ? Icons.check_circle
-                : Icons.radio_button_unchecked,
+        );
+      },
+      onDismissed: (direction) {
+        widget.onArchiveHabit?.call(habit.id);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: completed
+              ? AppColors.primary.withOpacity(0.08)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
             color: completed
-                ? AppColors.primary
-                : const Color(0xFFCBD5E1),
-            size: 28,
+                ? AppColors.primary.withOpacity(0.3)
+                : const Color(0xFFE2E8F0),
           ),
-          tooltip: completed ? '已完成' : '打卡',
-          onPressed: completed
-              ? null
-              : () => widget.onCheckIn?.call(habit.id),
         ),
-        onTap: () => widget.onEditHabit?.call(habit),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          leading: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 拖拽手柄
+              ReorderableDragStartListener(
+                index: _localHabits.indexOf(habit),
+                child: const Icon(
+                  Icons.drag_handle,
+                  color: Color(0xFFCBD5E1),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // 习惯图标
+              CircleAvatar(
+                backgroundColor: completed
+                    ? AppColors.primary
+                    : Color(habit.colorValue),
+                radius: 18,
+                child: Icon(
+                  completed ? Icons.check : _getCategoryIcon(habit.category),
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+          title: Text(
+            habit.name,
+            style: TextStyle(
+              decoration: completed ? TextDecoration.lineThrough : null,
+              color: completed ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
+            ),
+          ),
+          subtitle: Text(
+            completed
+                ? '已完成 ${checkCount}/${habit.targetCount} ${habit.unit}'
+                : '目标: ${habit.targetCount} ${habit.unit}（已打卡 $checkCount 次）',
+            style: TextStyle(
+              color: completed ? AppColors.primary : const Color(0xFF94A3B8),
+              fontWeight: completed ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+          trailing: IconButton(
+            icon: Icon(
+              completed
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
+              color: completed
+                  ? AppColors.primary
+                  : const Color(0xFFCBD5E1),
+              size: 28,
+            ),
+            tooltip: completed ? '撤销打卡' : '打卡',
+            onPressed: () {
+              if (completed) {
+                widget.onUndoCheckIn?.call(habit.id);
+              } else {
+                widget.onCheckIn?.call(habit.id);
+              }
+            },
+          ),
+        ),
       ),
     );
   }

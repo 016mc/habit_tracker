@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../presentation/theme/app_theme.dart';
+import '../../../data/models/habit_model.dart';
+import '../../../presentation/providers/habit_provider.dart';
 import '../../widgets/common/app_card.dart';
 import 'widgets/theme_selector.dart';
 
@@ -10,6 +12,7 @@ import 'widgets/theme_selector.dart';
 /// 提供应用设置功能，包括：
 /// - 主题切换（浅色/深色/跟随系统）
 /// - 数据管理（导出/清除数据）
+/// - 已归档习惯管理
 /// - 关于信息
 /// 采用简约列表设计风格。
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -63,6 +66,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 12),
                   // 主题选择器
                   const ThemeSelector(),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacingLarge),
+
+            // 习惯管理
+            _buildSectionTitle(context, '习惯管理'),
+            const SizedBox(height: 8),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  _buildSettingsItem(
+                    context,
+                    icon: Icons.archive_outlined,
+                    iconColor: AppColors.supplement,
+                    title: '已归档习惯',
+                    subtitle: '查看和恢复已归档的习惯',
+                    onTap: _onShowArchivedHabits,
+                  ),
                 ],
               ),
             ),
@@ -127,6 +150,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// 显示已归档习惯的 BottomSheet
+  void _onShowArchivedHabits() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return _ArchivedHabitsSheet();
+      },
     );
   }
 
@@ -266,5 +303,174 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       applicationName: '习惯追踪',
       applicationVersion: 'v1.0.0',
     );
+  }
+}
+
+/// 已归档习惯 BottomSheet
+class _ArchivedHabitsSheet extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_ArchivedHabitsSheet> createState() => _ArchivedHabitsSheetState();
+}
+
+class _ArchivedHabitsSheetState extends ConsumerState<_ArchivedHabitsSheet> {
+  List<Habit> _archivedHabits = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArchivedHabits();
+  }
+
+  Future<void> _loadArchivedHabits() async {
+    try {
+      final habits = await ref.read(habitProvider.notifier).loadArchivedHabits();
+      if (mounted) {
+        setState(() {
+          _archivedHabits = habits;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _onUnarchive(Habit habit) async {
+    try {
+      await ref.read(habitProvider.notifier).unarchiveHabit(habit.id);
+      if (mounted) {
+        setState(() {
+          _archivedHabits.removeWhere((h) => h.id == habit.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已恢复「${habit.name}」')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('恢复失败: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.8,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            // 顶部拖拽指示器
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 4),
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.archive, size: 20, color: AppColors.supplement),
+                  SizedBox(width: 8),
+                  Text(
+                    '已归档习惯',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _archivedHabits.isEmpty
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Text(
+                              '没有已归档的习惯',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: scrollController,
+                          itemCount: _archivedHabits.length,
+                          itemBuilder: (context, index) {
+                            final habit = _archivedHabits[index];
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Color(habit.colorValue),
+                                radius: 18,
+                                child: Icon(
+                                  _getCategoryIcon(habit.category),
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                              title: Text(habit.name),
+                              subtitle: Text(
+                                habit.description.isEmpty
+                                    ? habit.category.name
+                                    : habit.description,
+                                style: const TextStyle(
+                                  color: Color(0xFF94A3B8),
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: TextButton(
+                                onPressed: () => _onUnarchive(habit),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                ),
+                                child: const Text('恢复'),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  IconData _getCategoryIcon(HabitCategory category) {
+    switch (category) {
+      case HabitCategory.supplement:
+        return Icons.medication;
+      case HabitCategory.learning:
+        return Icons.menu_book;
+      case HabitCategory.gaming:
+        return Icons.sports_esports;
+      case HabitCategory.exercise:
+        return Icons.fitness_center;
+      case HabitCategory.custom:
+        return Icons.star;
+    }
   }
 }
