@@ -362,100 +362,102 @@ class _ArchivedHabitsSheetState extends ConsumerState<_ArchivedHabitsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.5,
-      minChildSize: 0.3,
-      maxChildSize: 0.8,
-      expand: false,
-      builder: (context, scrollController) {
-        return Column(
-          children: [
-            // 顶部拖拽指示器
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 4),
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 顶部拖拽指示器
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(Icons.archive, size: 20, color: AppColors.supplement),
-                  SizedBox(width: 8),
-                  Text(
-                    '已归档习惯',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              children: [
+                Icon(Icons.archive, size: 20, color: AppColors.supplement),
+                SizedBox(width: 8),
+                Text(
+                  '已归档习惯',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const Divider(height: 1),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _archivedHabits.isEmpty
-                      ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(32),
-                            child: Text(
-                              '没有已归档的习惯',
-                              style: TextStyle(
-                                color: Color(0xFF94A3B8),
-                                fontSize: 14,
+          ),
+          const Divider(height: 1),
+          _isLoading
+              ? const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : _archivedHabits.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(
+                        child: Text(
+                          '没有已归档的习惯',
+                          style: TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    )
+                  : ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.5,
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _archivedHabits.length,
+                        itemBuilder: (context, index) {
+                          final habit = _archivedHabits[index];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Color(habit.colorValue),
+                              radius: 18,
+                              child: Icon(
+                                _getCategoryIcon(habit.category),
+                                color: Colors.white,
+                                size: 18,
                               ),
                             ),
-                          ),
-                        )
-                      : ListView.builder(
-                          controller: scrollController,
-                          itemCount: _archivedHabits.length,
-                          itemBuilder: (context, index) {
-                            final habit = _archivedHabits[index];
-                            return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Color(habit.colorValue),
-                                radius: 18,
-                                child: Icon(
-                                  _getCategoryIcon(habit.category),
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
+                            title: Text(habit.name),
+                            subtitle: Text(
+                              habit.description.isEmpty
+                                  ? habit.category.name
+                                  : habit.description,
+                              style: const TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 12,
                               ),
-                              title: Text(habit.name),
-                              subtitle: Text(
-                                habit.description.isEmpty
-                                    ? habit.category.name
-                                    : habit.description,
-                                style: const TextStyle(
-                                  color: Color(0xFF94A3B8),
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: TextButton(
+                              onPressed: () => _onUnarchive(habit),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.primary,
                               ),
-                              trailing: TextButton(
-                                onPressed: () => _onUnarchive(habit),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                ),
-                                child: const Text('恢复'),
-                              ),
-                            );
-                          },
-                        ),
-            ),
-          ],
-        );
-      },
+                              child: const Text('恢复'),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 
